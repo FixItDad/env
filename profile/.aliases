@@ -1,0 +1,53 @@
+#-*-shell-script-*-
+
+
+# Setup ssh-agent on terminal where is is not working.
+ssh-reagent () {
+    for agent in /tmp/ssh-*/agent.*; do
+        export SSH_AUTH_SOCK=$agent
+        if ssh-add -l 2>&1 > /dev/null; then
+            echo Found working SSH Agent:
+            ssh-add -l
+            return
+        fi
+    done
+    echo Cannot find ssh agent - maybe you should reconnect and forward it?
+}
+
+# Take a list of arbirarily named files and rename them with a prefix and sequence number
+# Used e.g. renaming audio book parts before moving to an audio player
+function renameNumbered {
+    if [[ "" == "$1" ]] ; then
+        echo "filelist | renameNumbered baseName"
+    else
+        typeset -Z2 j
+        j=0
+        base="$1"
+        while read i; do
+            EXT=${i##*\.}
+            mv -i "$i" "${base}-${j}.${EXT}"
+            let j=j+1
+            done
+    fi
+}
+
+# print a sequential range of numbers. Use {0..10..1} syntax in bash
+function range {
+    typeset -iZ2 low
+    low=$1
+    high=$2
+    if [[ "$low" == "" ]]; then low=0; fi
+    if [[ "$high" == "" ]]; then high=99; fi
+    while (( $low < $high )); do
+        echo "$low"
+        low=$((low + 1))
+    done
+}
+
+
+alias ados2unix='sed "s/\r$//"'
+alias dpkg-history='egrep "(install|upgrade|remove) " /var/log/dpkg.log'
+alias lc='ls --color'
+alias tolower='tr "[:upper:]" "[:lower:]"'
+alias wipe='wipe -qfc'
+

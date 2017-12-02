@@ -1,0 +1,10 @@
+#!/bin/bash
+
+NAME=${1}
+if [[ "${NAME}" == "" ]]; then
+    print "Usage ${0} <user@host>"
+    exit 1
+fi
+shift 
+
+rxvt -geometry 132x55 -fn fixed -ls -sl 1000 --title "${NAME}" -n "${NAME}" -tn vt100 -e ssh -Y $* ${NAME} &
