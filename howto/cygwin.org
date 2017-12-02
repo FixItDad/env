@@ -1,0 +1,25 @@
+* sshd setup
+
+chmod 755 /var
+chgrp Administrators /var/{run,log,empty}
+chown Administrators /var/{run,log,empty}
+chmod 775 /var/{run,log}
+chmod 755 /var/empty
+
+chmod +r /etc/passwd
+chmod +r /etc/group
+
+ssh-host-config
+overwrite sshd_config:Yes
+use privilege separation: Yes
+install as a service: yes
+CYGWIN value for the daemon: ntsec binmode nodosfilewarning
+
+
+chown SYSTEM /var/empty
+chmod 755 /var/empty
+cygrunsrv -S sshd
+
+
+Target: C:\cygwin\bin\run.exe -p /usr/X11R6/bin xterm -display 127.0.0.1:0.0 -ls +tb -sl 1000 -cc 45-57:48,64-90:48,126:48
+Start in: C:\cygwin\bin

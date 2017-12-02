@@ -1,0 +1,98 @@
+# This was written for JBoss 5
+
+* Decrypt jboss passwords
+
+java -jar JBossDecrypter.jar ${password}
+
+Passwords in (e.g.)
+/opt/jboss-eap-5.2/jboss-as/server/default/conf/login-config.xml
+
+* change listen port
+Edit the file
+${JBOSS_HOME}/server/default/conf/bindingservice.beans/META-INF/bindings-jboss-beans.xml
+as follows -> Change ${jboss.service.binding.set:ports-default} to
+${jboss.service.binding.set:ports-01}
+
+This will change all default to default+100 port. HTTP - > 8180 and so on.
+Or use run.conf or command line param to modify e.g. -Djboss.service.binding.set=ports-default
+
+* Redeploy an application when change a file in an exploded deployment directory
+Touch the top level descriptor. Updating the file works as well as it changes the timestamp.
+Here are the descriptors for the most common archive types:
+.JAR META-INF/ejb-jar.xml
+.WAR WEB-INF/web.xml
+.EAR META-INF/application.xml
+.SAR META-INF/jboss-service.xml
+AS-5 In JBossAS-5, META-INF/jboss-beans.xml or META-INF/*-jboss-beans.xml too are considered top level deployment descriptors.
+
+* Cleanup 
+** temp work areas (exploded apps, etc)
+rm jboss-as/server/tmp and jboss-as/server/work directories
+
+
+* Configuration
+** Default port usage
+TCP    10.2.20.156:1090       <--- RMI/JRMP socket for connecting to the JMX MBeanServer
+TCP    10.2.20.156:1091       <--- RMI server socket
+TCP    10.2.20.156:1099       <--- JNDI Service
+TCP    10.2.20.156:1098       <--- RMI Port for JNDI Service
+TCP    10.2.20.156:4446       <--- JBoss Remoting Connector
+TCP    10.2.20.156:4712       <--- JBossTS Service
+TCP    10.2.20.156:4713       <--- JBossTS Service
+TCP    10.2.20.156:5445       <--- HornetQ JMS Service
+TCP    10.2.20.156:5455       <--- HornetQ Netty port
+TCP    10.2.20.156:5500       <--- JBoss Remoting
+TCP    10.2.20.156:5501       <--- JBoss Remoting ssl
+TCP    10.2.20.156:8009       <--- Web server AjpConnector
+TCP    10.2.20.156:8080       <--- Web server HTTP Connector
+TCP    10.2.20.156:8083       <--- Web services
+
+# additional ports for clusterd servers
+TCP    10.2.20.156:1100       <--- HA JNDI Service
+TCP    10.2.20.156:1101       <--- HA JNDI Service
+TCP    10.2.20.156:3528       <--- Corba IIOP Service
+
+** Config files 
+# JMS destinations
+deploy/messaging/destinations-service.xml
+# JMS providers
+deploy/messaging/jms-ds/.xml
+
+** Multiple instances on a node
+cp ${JBOSS_HOME}/bin/run.conf ${JBOSS_HOME}/server/$SVRNAME/run.conf
+# edit as needed. Use this file to change ports: e.g. -Djboss.service.binding.set=ports-default
+
+** Clusters defined by Partition Name
+# in run.conf
+-Djboss.partition.name=${env_var:HOSTNAME}"
+
+* cleanup
+NAME=<servername>
+rm -rf server/$NAME/tmp server/$NAME/work
+
+* Hibernate debugging
+default/conf/hibernate.cfg.xml
+
+--- conf/hibernate.cfg.xml  2015-09-09 10:16:38.042536429 -0400
++++ default/conf/hibernate.cfg.xml      2015-08-31 15:59:24.746866948 -0400
+@@ -46,12 +46,12 @@
+ 
+ 
+                <!-- SQL rendering properties (begin) ===
++
++               ==== SQL rendering properties (end) -->
+                <property name="hibernate.format_sql">true</property>
+                <property name="hibernate.use_sql_comments">true</property>
+                <property name="hibernate.show.sql">true</property> 
+ 
+-               ==== SQL rendering properties (end) -->
+-
+                <!-- ############################################ -->
+                <!-- # mapping files with external dependencies # -->
+                <!-- ############################################ -->
+
+
+* unsign jar
+# May help with "signer information does not match signer information of other classes in the same package"
+i=something.jar
+zip -d $i 'META-INF/*.SF' 'META-INF/*.RSA'

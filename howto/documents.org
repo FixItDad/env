@@ -1,0 +1,55 @@
+
+* PDF
+# Convert pdf to text, output to stdout
+pdftotext -layout -enc ASCII7 infile.pdf -
+
+# k2pdfopt
+# -c : color  -bpc n : bits per color
+# -col n : number of input columns
+# -w n output width
+k2pdfopt -c -col 1 -bpc 8 -w 480 infile.pdf
+
+# Remove password
+pdftk <infile> input_pw PROMPT output <outfile>
+
+# Encrypt a PDF (DOES NOT WORK)
+pdftk in.pdf output out.pdf owner_pw PROMPT allow AllFeatures
+<enter PW>
+
+# Encrypt with 7zip
+7z a -p -mx=0 -mhe -t7z out.7z in.file
+
+# Concat PDF files
+pdftk *.pdf cat output combined.pdf
+
+# for SignLanguageSongs
+~/bin/combinePDFs
+
+
+* Wikipedia tables to spreadsheet
+
+In the new spreadsheet, in cell A1, type: 
+=ImportHtml("http://en.wikipedia.org/wiki/List_of_bank_failures_in_the_United_States_(2008%E2%80%93present)","table", 1)
+
+There are three values in the parentheses after ImportHtml. First, the
+URL that you'd like to scrape. Second, the type of object you want to
+scrape. We're just going to work with tables. Third, a number that
+says which table you want - the first one, second one, etc.
+
+
+* Batch convert office docs to PDF
+# ***** Make sure Libreoffice is not running *****
+libreoffice --headless --invisible --convert-to pdf *.odt
+# or (safer)
+ls *.odt |while read i; do libreoffice --headless --convert-to pdf "${i}"; done
+
+* convert SVG to PDF
+rsvg-convert -f pdf -o ${i%svg}pdf
+# Imagemagik
+convert svg049.svg t.pdf
+# Inkscape
+inkscape t.svg --export-pdf=t.pdf
+# another
+rasterizer -m application/pdf file.svgz -d file.pdf 
+# another
+cairosvg in.svg -o out.pdf

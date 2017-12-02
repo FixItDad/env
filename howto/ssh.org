@@ -1,0 +1,42 @@
+* remove line from known_hosts
+sed -i 42d ~/.ssh/known_hosts
+
+* Passwordless access setup
+Move key to server as usual
+
+* Passwordless access after setup
+ssh-agent
+#run the commands it spits out
+ssh-add
+
+* The command I use to create the SOCKS5 proxy using OpenSSH is:
+ssh -C2qTnNM -D 8080 user@remotehost
+
+This creates a compressed connection that forces pseudo-tty allocation, as well as places the ssh client into master mode for connection sharing (see man ssh for more details on the other options). 
+* chroot ssh
+http://www.howtoforge.com/chroot_ssh_sftp_debian_etch
+
+
+* interactive
+~C  to get to command line then use L, R, etc
+      -L[bind_address:]port:host:hostport    Request local forward
+      -R[bind_address:]port:host:hostport    Request remote forward
+      -D[bind_address:]port                  Request dynamic forward
+      -KR[bind_address:]port                 Cancel remote forward
+~# to get list of forwarded ports.
+
+~. Disconnect
+
+~? Help
+
+# run command remotely as root. or use Ansible 
+ssh -tt $i "echo '$PW'|sudo -S su -c '<cmd>'"
+
+# set up authorized key file
+mkdir ~/.ssh
+chmod 700 ~/.ssh
+cat >>~/.ssh/authorized_keys <<EOF
+...
+
+EOF
+chmod 600 ~/.ssh/authorized_keys

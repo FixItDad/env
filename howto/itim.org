@@ -1,0 +1,100 @@
+# development tools
+ACI management tool: Documentation sticks
+
+
+# Purge activity logs; Purge DB2 logs afterward
+/opt/IBM/itim/bin/unix/DBPurge.sh -age 30
+
+
+# Find list of accesses
+(&(&(|(eraccessname=*)(eraccessdescription=*))(erobjectprofilename=*))(objectclass=ERACCESSITEM))
+
+# turn off SSO.
+/bin/cp /opt/IBM/itim/data/ui.properties /opt/IBM/itim/data/ui.properties.backup
+sed -i 's/^enrole.ui.ssoEnabled=true$/enrole.ui.ssoEnabled=false/g' /opt/IBM/itim/data/ui.properties
+# restart ITIM server
+
+# restore SSO
+cp /opt/IBM/itim/data/ui.properties.backup /opt/IBM/itim/data/ui.properties
+# restart ITIM server
+
+
+# compare ITIM views
+~/bin/scripts/itimView.sh exportall /tmp/itimView-dev
+scp /tmp/itimView-dev*.del ...
+sort -n -t, -k2 -o itimViews-dev_viewtasks.del itimViews-dev_viewtasks.del
+sort -n -t, -k2 -o itimViews-test_viewtasks.del itimViews-test_viewtasks.del
+diff itimViews-dev_viewtasks.del itimViews-test_viewtasks.del
+
+# password prompt on restore. Add following to enRole.properties
+## skip the password validation during account restore operation.
+account.restore.skip.password.validation=true
+
+
+dn: erglobalid=1316637696663131944,ou=operations,ou=itim,ou=CJIS,dc=itim
+erProcessname: InactivityPurge
+
+dn: erobjectprofilename=MyPerson,ou=objectProfile,ou=itim,ou=CJIS,dc=itim
+erobjectprofilename: My Person
+objectclass: top
+objectclass: erObjectProfile
+objectclass: erManagedItem
+ercategory: Person
+erlifecyclerule:: PD94bWwgdmVyc2lvbj0iMS4wIj8+PFJ1bGUgaWQ9IjEzMzA4NTQyOTA3NjYz
+...
+erattrmap: erlastoperation=erlastoperation
+erattrmap: cn=cn
+ercustomclass: MyPerson
+errdnattr: cn
+ersearchattr: federationid
+ersearchattr: givenname
+erxml:: PE9iamVjdFByb2ZpbGVPcGVyYXRpb24gbmFtZT0idHJhbnNmZXIiIGlzU3RhdGljPSJmYW
+...
+erxml example: <ObjectProfileOperation name="add" isStatic="true" isSystem="false" definitionDN="erglobalid=3103557087911026157,ou=operations,ou=itim,ou=CJIS,dc=itim"><OperationParameter name="container" type="OrganizationalContainer" description="An organizational container that will be home for the new person."/><OperationParameter name="person" type="Person" description="A directory value object containing attributes of new user."/></ObjectProfileOperation>
+
+
+* ACI
+** Protection Category
+Account
+Business Partner Person
+Identity Mananger User
+Person
+Service
+
+
+
+
+* Fix clipboard problem in workflow editor	
+
+Well, it turns out with the release of the Java Plug-in 1.6.0_24 in February 2011, copy and paste from the system clipboard was deemed a security hole and disabled. You can copy and paste BETWEEN applets. But if you try to use something from your main clipboard, it can't be copied in.
+
+So there are a couple of options for a workaround. You can roll back to an earlier version of the plug-in. That will work, but chances are all future releases will still keep copy and paste disabled, so you'd never be able to upgrade.
+
+The other alternative is to provide a custom java security policy file which enables access to the system clipboard again.
+
+First locate your local Java Security Policy file. The file is named java.policy and should be in the lib\security folder of your Java installation. On Windows 7, it can be found at C:\Program Files (x86)\Java\jre6\lib\security. Copy this file to your home folder (ex. C:\Users\Kyle). Rename the file to .java.policy (note the period at the beginning). Edit the file in a text editor. Locate this line of text:
+
+// "standard" properies that can be read by anyone
+
+Add the following line just below it like so:
+
+// "standard" properies that can be read by anyone
+permission java.awt.AWTPermission "accessClipboard";
+
+Save the file. Close any open browsers and ensure that Java is not running before testing.
+
+
+* How to load an external JavaScript file on the fly
+# Not tested
+
+Enable access to java io in the extension properties and then use the following code:
+
+// Include common library functions
+var imprt_freader=new java.io.FileReader("lib/workflowLibrary.js");
+var imprt_file = new java.io.BufferedReader(imprt_freader);
+var imprt_line = null;
+var imprt_code = '';
+while((imprt_line = imprt_file.readLine()) != null)
+    imprt_code += imprt_line + '\n';
+imprt_file.close();
+eval(imprt_code);
