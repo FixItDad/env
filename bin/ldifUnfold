@@ -1,0 +1,24 @@
+#!/usr/bin/awk -f
+
+# Unfold short ldif lines into long ones.
+# 2009-07-21 Paul T Sparks
+
+/^[^ ]/ {
+        if (line != "") {
+                print line;
+        }
+        line = $0;
+}
+
+/^ / {
+        line = line substr($0, 2);
+}
+
+/^$/ {
+    line = line "\n"
+}
+END {
+        if (line != "") {
+        print line;
+        }
+}

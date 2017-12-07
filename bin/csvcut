@@ -1,0 +1,101 @@
+#!/bin/env python
+# Cut values from a CSV file
+
+# Paul T Sparks 2017-09-20
+
+import csv
+import datetime
+import getopt
+import os
+import re
+import string
+import sys
+
+
+# GLOBAL: command line options
+options= {}
+
+# GLOBAL debug flag
+debugFlag=False
+
+def debug(*args):
+    if debugFlag:
+        print >> sys.stderr, ' '.join(map(str,args))
+
+def log(*args):
+    print >> sys.stderr, ' '.join(map(str,args))
+
+def usage():
+    print >> sys.stderr, """
+Usage: csvcut -c <column numbers> [filename]
+
+-c <column numbers> 
+   Comma separated list of column numbers or ranges. 
+   Use hyphen for range. First column is 1. Columns are output in specified order.
+-d <delimiter>
+   Delimiter character to use. Defaults to comma.
+
+filename is optional. stdin will be used if no filename is specified.
+
+For example:
+csvcut -c 1-2,10,5-7 test.csv
+"""
+
+# Process command line options
+# Results are returned in a dictionary with standard names and defaults set:
+# userid, userpw, ldapurl
+def getOptions():
+    options= {'delimiter':','}
+
+    optlist, args= getopt.getopt(sys.argv[1:], 'c:d:')
+    optDict= {}
+    for name, val in optlist:
+        optDict[name]= val
+    optionKeys= optDict.keys()
+
+    if '-c' in optionKeys:
+        options['columns']= optDict['-c']
+    if '-d' in optionKeys:
+        options['delimiter'] = optDict['-d']
+
+    return options, args
+
+
+
+########################################
+# Begin MAIN program
+try:
+    options, args= getOptions()
+except getopt.GetoptError ,msg:
+    log(msg)
+    usage()
+    sys.exit(2)
+
+if len(args) > 0:
+    csvFile= open(args[0], 'rb')
+else:
+    csvFile= sys.stdin
+
+if not 'columns' in options:
+    log('No columns specified.')
+    usage()
+    sys.exit(2)
+
+cols = []
+for i in string.split(options['columns'],','):
+    rnge = string.split(i,'-')
+    if len(rnge) == 1: cols.append(int(rnge[0]))
+    if len(rnge) == 2: cols += range(int(rnge[0]), int(rnge[1])+1)
+
+csvIn= csv.reader(csvFile, delimiter=options['delimiter'])
+csvOut= csv.writer(sys.stdout, lineterminator='\n', delimiter=options['delimiter'])
+
+for invals in csvIn:
+    out= []
+    for i in cols:
+        if i <= len(invals):
+            out.append(invals[i-1])
+        else:
+            out.append("")
+    csvOut.writerow(out)
+
