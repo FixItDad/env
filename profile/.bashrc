@@ -1,9 +1,13 @@
 # .bashrc
 
 # Source global definitions
-if [ -f ${HOME}/.sys_bashrc ]; then
-    . ${HOME}/.sys_bashrc
+if [ -f /etc/bashrc ]; then
+    . /etc/bashrc
 fi
+# Do my own version if I don;t like the system default
+#if [ -f ${HOME}/.sys_bashrc ]; then
+#    . ${HOME}/.sys_bashrc
+#fi
 
 # Include user specific aliases and functions
 if [ -f ${HOME}/.aliases ]; then
@@ -16,12 +20,12 @@ if [ -f "${HOME/bin/ansible-fns.sh" ]; then
 fi
 
 # Include ldap functions
-if [ -f "${HOME/bin/ldap-fns.sh" ]; then
+if [ -f "${HOME}/bin/ldap-fns.sh" ]; then
   . "${HOME}/bin/ldap-fns.sh"
 fi
 
 # Include itim functions (requires LDAP fns above)
-if [ -f "${HOME/bin/itim-fns.sh" ]; then
+if [ -f "${HOME}/bin/itim-fns.sh" ]; then
   . "${HOME}/bin/itim-fns.sh"
 fi
 
@@ -34,6 +38,7 @@ export HISTTIMEFORMAT="%d-%H%M%S "
 
 ####SSHagent settings####
 SSH_ENV="$HOME/.ssh/environment"
+# List of hosts where ssh-agent should start
 STARTHOSTS='TODOhomesvr'
 
 function start_agent {
@@ -45,7 +50,6 @@ function start_agent {
 }
 
 # Source SSH settings, if applicable
-#if [[ "$HOSTNAME" == "$STARTHOST" ]]; then
 if echo "$STARTHOSTS" |grep "$HOSTNAME" >/dev/null; then
     if [ -f "${SSH_ENV}" ]; then
         . "${SSH_ENV}" > /dev/null
