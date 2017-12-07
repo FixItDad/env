@@ -4,8 +4,9 @@ alias ados2unix='sed "s/\r$//"'
 alias base64Decode='openssl enc -d -base64'
 alias dpkg-history='egrep "(install|upgrade|remove) " /var/log/dpkg.log'
 alias lc='ls --color'
+alias notmout='exec env -u TMOUT bash'
 alias ruler0='echo "-----+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8"'
-alias ruler='echo "----+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8"'
+alias ruler1='echo "----+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8"'
 alias tolower='tr "[:upper:]" "[:lower:]"'
 alias wipe='wipe -qfc'
 alias xterm="xterm +tb -sl 1000 -cc 45-57:48,64-90:48,126:48"
@@ -16,13 +17,18 @@ alias xterm="xterm +tb -sl 1000 -cc 45-57:48,64-90:48,126:48"
 #alias nmap='nc -v -n -z'
 #alias waspwdecode='${WAS_HOME}/java/bin/java -cp ${WAS_HOME}/runtimes/com.ibm.ws.ejb.thinclient_7.0.0.jar com.ibm.ws.security.util.PasswordDecoder'
 
+# certDetails ip:port
+function certDetails {
+  echo | openssl s_client -connect ${1} -CAfile trustedCertFile| openssl x509 -inform pem -noout -text
+}
+
 function diffdirs() {
 diff -rdq "${1}" "${2}" |sort |sed -e '/^Files /s/ and / /' -e '/^Files /s/ differ//' -e '/^Files /s/Files /diff -u /'
 }
 
-# certDetails ip:port
-function certDetails {
-  echo | openssl s_client -connect ${1} -CAfile trustedCertFile| openssl x509 -inform pem -noout -text
+# kill by string match
+function kills {
+  kill $(ps -ef |grep "${1}" |awk '$0 !~/grep/{print $2}')
 }
 
 # print a sequential range of numbers. Use {0..10..1} syntax in bash
@@ -38,6 +44,13 @@ function range {
     done
 }
 
+# Set terminal title (xterm)
+function setTitle {
+    echo -ne "\033]0;${1}\007"
+    # ESC]0;stringBEL -- Set icon name and window title to string
+    # ESC]1;stringBEL -- Set icon name to string
+    # ESC]2;stringBEL -- Set window title to string
+}
 
 # Setup ssh-agent on terminal where is is not working.
 ssh-reagent () {
