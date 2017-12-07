@@ -1,5 +1,43 @@
 #-*-shell-script-*-
 
+alias ados2unix='sed "s/\r$//"'
+alias base64Decode='openssl enc -d -base64'
+alias dpkg-history='egrep "(install|upgrade|remove) " /var/log/dpkg.log'
+alias lc='ls --color'
+alias ruler0='echo "-----+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8"'
+alias ruler='echo "----+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8"'
+alias tolower='tr "[:upper:]" "[:lower:]"'
+alias wipe='wipe -qfc'
+alias xterm="xterm +tb -sl 1000 -cc 45-57:48,64-90:48,126:48"
+
+
+#alias emacs='emacs -geometry 103x58+2396+25'
+#alias firefoxUnlock='rm -f ~/.mozilla/firefox/5rptdqys.default/lock ~/.mozilla/firefox/5rptdqys.default/.parentlock'
+#alias nmap='nc -v -n -z'
+#alias waspwdecode='${WAS_HOME}/java/bin/java -cp ${WAS_HOME}/runtimes/com.ibm.ws.ejb.thinclient_7.0.0.jar com.ibm.ws.security.util.PasswordDecoder'
+
+function diffdirs() {
+diff -rdq "${1}" "${2}" |sort |sed -e '/^Files /s/ and / /' -e '/^Files /s/ differ//' -e '/^Files /s/Files /diff -u /'
+}
+
+# certDetails ip:port
+function certDetails {
+  echo | openssl s_client -connect ${1} -CAfile trustedCertFile| openssl x509 -inform pem -noout -text
+}
+
+# print a sequential range of numbers. Use {0..10..1} syntax in bash
+function range {
+    typeset -iZ2 low
+    low=$1
+    high=$2
+    if [[ "$low" == "" ]]; then low=0; fi
+    if [[ "$high" == "" ]]; then high=99; fi
+    while (( $low < $high )); do
+        echo "$low"
+        low=$((low + 1))
+    done
+}
+
 
 # Setup ssh-agent on terminal where is is not working.
 ssh-reagent () {
@@ -31,23 +69,57 @@ function renameNumbered {
     fi
 }
 
-# print a sequential range of numbers. Use {0..10..1} syntax in bash
-function range {
-    typeset -iZ2 low
-    low=$1
-    high=$2
-    if [[ "$low" == "" ]]; then low=0; fi
-    if [[ "$high" == "" ]]; then high=99; fi
-    while (( $low < $high )); do
-        echo "$low"
-        low=$((low + 1))
-    done
+
+# "merge" files using a symlink
+function mergeFiles {
+    echo "Checking files..."
+    if [[ ! -f "$2" ]]; then
+	echo "Not a regular file: $2"
+	return
+    fi
+    if [[ ! -f "$1" ]]; then
+	echo "Not a regular file: $1"
+	return
+    fi
+    if ! cmp "$1" "$2"; then
+	echo "files are not the same"
+    fi
+
+    mv "$2" "$2".temp$$
+    ln -s "$1" "$2"
+    if ! cmp "$1" "$2"; then
+	rm -f "$2"
+	mv "$2".temp$$ "$2"
+	echo "Improper link target: $1"
+	return
+    fi
+    rm -f "$2".temp$$
+    echo "Linked $2 to $1"
 }
 
+# "merge" files using a hard link
+function mergeHard {
+    echo "Checking files..."
+    if [[ ! -f "$2" ]]; then
+	echo "Not a regular file: $2"
+	return
+    fi
+    if [[ ! -f "$1" ]]; then
+	echo "Not a regular file: $1"
+	return
+    fi
+    if ! cmp "$1" "$2"; then
+	echo "files are not the same"
+    fi
 
-alias ados2unix='sed "s/\r$//"'
-alias dpkg-history='egrep "(install|upgrade|remove) " /var/log/dpkg.log'
-alias lc='ls --color'
-alias tolower='tr "[:upper:]" "[:lower:]"'
-alias wipe='wipe -qfc'
-
+    mv "$2" "$2".temp$$
+    ln "$1" "$2"
+    if ! cmp "$1" "$2"; then
+	rm -f "$2"
+	mv "$2".temp$$ "$2"
+	echo "Improper link target: $1"
+	return
+    fi
+    rm -f "$2".temp$$
+    echo "Linked $2 to $1"
+}
