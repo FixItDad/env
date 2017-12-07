@@ -8,3 +8,11 @@ fi
 shift 
 
 rxvt -geometry 132x55 -fn fixed -ls -sl 1000 --title "${NAME}" -n "${NAME}" -tn vt100 -e ssh -Y $* ${NAME} &
+
+# use xterm (can change font size while running). Title format??
+#TITLE=$(echo "${NAME}"|awk '{print substr($0,1,4) "-"}')
+#TITLE="${TITLE}${NAME##*@}"
+#xterm -geometry 132x55 -cc "45-47:48,126:48" -ls -sl 1000 -title "${TITLE}" -n "${TITLE}" -tn vt100 -e ssh -Y $* ${NAME} &
+
+# no bash profile (work around shell TMOUT)
+# xterm -geometry 132x55 -cc "45-47:48,126:48" -ls -sl 1000 -title "${TITLE}" -n "${TITLE}" -tn vt100 -e ssh -tY $* ${NAME} '/bin/bash --noprofile -i'&

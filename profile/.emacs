@@ -1,14 +1,33 @@
+;; .emacs
+
 (setq inhibit-splash-screen t)
+;;; uncomment this line to disable loading of "default.el" at startup
+;; (setq inhibit-default-init t)
+
+;; turn on font-lock mode
+(when (fboundp 'global-font-lock-mode)
+  (global-font-lock-mode t))
+
+;; enable visual feedback on selections
+;(setq transient-mark-mode t)
+
+;; default to better frame titles
+(setq frame-title-format
+      (concat  "%b - emacs@" (system-name)))
+
+;; default to unified diffs
+(setq diff-switches "-u")
 
 (global-set-key "\C-h" 'backward-delete-char)
-
 (global-set-key "\C-cw" 'compare-windows)
 (global-set-key "\C-xp" 'other-window)
+(global-set-key "\C-v" 'yank)
 (global-set-key "\M- " 'set-mark-command)
 (global-set-key "\M-r" 'query-replace-regexp)
 (global-set-key "\C-xg" 'goto-line)
 (global-set-key [home] 'beginning-of-line)
 (global-set-key [end] 'end-of-line)
+(set-default-font "-misc-fixed-medium-*-*-*-15-*-*-*-*-*-*-*")
 
 ;; Change the binding of mouse button 2, so that it inserts the
 ;; selection at point (where the text cursor is), instead of at
@@ -98,3 +117,10 @@
 ; allow remote editing over scp
 (require 'tramp)
 (setq tramp-default-method "scp")
+
+; desktop save
+(require 'desktop)
+(desktop-load-default)
+(desktop-read)
+(setq desktop-enable t)
+
