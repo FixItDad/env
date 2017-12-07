@@ -1,0 +1,134 @@
+#!/bin/env python
+# For  each  pair  of  input lines with identical join fields, write a line to standard output.  The default join field is the first
+
+# WARNING! Does NOT handle matching multiple file 1 lines to a single line in file 2.
+
+# Paul T Sparks 2017-09-26
+
+import csv
+import datetime
+import getopt
+import os
+import re
+import string
+import sys
+
+
+# GLOBAL: command line options
+options= {}
+
+# GLOBAL debug flag
+debugFlag=False
+
+def debug(*args):
+    if debugFlag:
+        print >> sys.stderr, ' '.join(map(str,args))
+
+def log(*args):
+    print >> sys.stderr, ' '.join(map(str,args))
+
+def usage():
+    print >> sys.stderr, """
+Usage: csvcut [OPTION] FILE1 FILE2
+
+-j FIELD 
+      equivalent to '-1 FIELD -2 FIELD'
+-1 FIELD
+      join on this FIELD of file 1 (defaults to 1)
+-2 FIELD
+      join on this FIELD of file 2 (defaults to 1)
+
+For example:
+csvjoin -j 1 test1.csv test2.csv
+"""
+
+# Process command line options
+# Results are returned in a dictionary with standard names and defaults set:
+# userid, userpw, ldapurl
+def getOptions():
+    options= {'j1':0, 'j2':0 }
+
+    optlist, args= getopt.getopt(sys.argv[1:], 'j:1:2:')
+    optDict= {}
+    for name, val in optlist:
+        optDict[name]= val
+    optionKeys= optDict.keys()
+
+    if '-j' in optionKeys:
+        options['j1']= int(optDict['-j']) -1
+        options['j2']= int(optDict['-j']) -1
+
+    if '-1' in optionKeys:
+        options['j1']= int(optDict['-1']) -1
+
+    if '-2' in optionKeys:
+        options['j2']= int(optDict['-2']) -1
+
+    return options, args
+
+
+
+########################################
+# Begin MAIN program
+try:
+    options, args= getOptions()
+except getopt.GetoptError ,msg:
+    log(msg)
+    usage()
+    sys.exit(2)
+
+if len(args) < 2:
+    log('missing input files')
+    usage()
+    sys.exit(2)
+
+j1= options['j1']
+j2= options['j2']
+
+csv1file= open(args[0], 'rb')
+csv1= csv.reader(csv1file)
+
+csv2file= open(args[1], 'rb')
+csv2= csv.reader(csv2file)
+
+csvOut= csv.writer(sys.stdout, lineterminator='\n')
+
+#vals1= csv1.next()
+#vals2= csv2.next()
+#if vals1[j1] == vals2[j2]:
+#    out= [vals1[j1]] + vals1[0:j1] + vals1[j1+1:] + vals2[0:j2] + vals2[j2+1:]
+#    csvOut.writerow(out)
+    
+eof1 = False
+try:
+    vals1= csv1.next()
+except StopIteration:
+    eof1 = True
+
+eof2 = False
+try:
+    vals2= csv2.next()
+except StopIteration:
+    eof2 = True
+
+while not eof1 and not eof2:
+#    print vals1
+#    print vals2
+#    print
+    if vals1[j1] < vals2[j2]:
+        try:
+            vals1= csv1.next()
+        except StopIteration:
+            eof1 = True
+    elif vals1[j1] > vals2[j2]:
+        try:
+            vals2= csv2.next()
+        except StopIteration:
+            eof2 = True
+    else:
+        out= [vals1[j1]] + vals1[0:j1] + vals1[j1+1:] + vals2[0:j2] + vals2[j2+1:]
+        csvOut.writerow(out)
+        try:
+            vals2= csv2.next()
+        except StopIteration:
+            eof2 = True
