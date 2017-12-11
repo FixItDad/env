@@ -1,0 +1,66 @@
+#-*- mode: yaml -*-
+# Examplr of creating a new OpenStack server then doing setup on it.
+- hosts: localhost
+
+  tasks:
+    - name: create the primary rsyslog server
+      os_server:
+        name: rsyslog-server1
+        state: present
+        image: centos7.1612
+        auth:
+          auth_url: "{{os_identity_url}}"
+          username: "{{openstack_user}}"
+          password: "{{vault_os_ansible}}"
+          project_name: proj
+        flavor : 2
+        key_name: ansible-ssh
+        network: privatenet
+        security_groups: default,rsyslog
+        floating_ip_pools: public
+        cacert: "{{playbook_dir}}/ansible-cacerts"
+        userdata: |
+          {% raw %}#cloud-config
+          groups:
+            - ansible
+
+          users:
+            - default
+            - name: ansible
+              gecos: Ansible access
+              primary-group: ansible
+              lock_passwd: true
+              sudo: ALL=(ALL) NOPASSWD:ALL
+              ssh-authorized-keys:
+                - ssh-rsa AAAAB3...34D Generated-by-Nova
+          {% endraw %}
+      register: rsyslog1
+
+    - name: Add rsyslog1 to inventory
+      add_host:
+        name: rsyslog1
+        groups: rsyslog
+        ansible_host: "{{ rsyslog1.server.public_v4 }}"
+
+    - debug: msg="Created VM at {{ rsyslog1.server.public_v4 }}"
+
+    - name: Wait for servers to be available
+      pause: seconds=15
+
+    - name: Install rsyslog on rsyslog1
+      include_tasks: "{{playbook_dir}}/rsyslog/rsyslog-tcp.yml"
+      vars:
+        ansible_host: "{{ rsyslog1.server.public_v4 }}"
+        ansible_user: ansible
+        ansible_ssh_private_key_file: "{{playbook_dir}}/ansible-ssh.pem"
+
+# OR
+# Run the rsyslog role on the newly created VMs
+# Use the variables to point Ansible at the new servers
+#    - name: Install rsyslog on rsyslog1
+#      include_role:
+#        name: rsyslog-tcp
+#      vars:
+#        ansible_host: "{{ rsyslog1.server.public_v4 }}"
+#        ansible_user: ansible
+#        ansible_ssh_private_key_file: "{{playbook_dir}}/ansible-ssh.pem"
