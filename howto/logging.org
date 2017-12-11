@@ -1,0 +1,12 @@
+* rsyslog high availability / failover
+
+** Excerpt from /etc/rsyslog.conf
+# Setup for auto failover from rsyslog1 to rsyslog2. Log to localbuffer if both down.
+# Should recover automatically when server comes back up.
+*.info;mail.none;authpriv.none;cron.none                @@{{ rsyslog1_ip }}
+$ActionExecOnlyWhenPreviousIsSuspended on
+&@@{{ rsyslog2_ip }}
+& /var/log/localbuffer
+$ActionExecOnlyWhenPreviousIsSuspended off
+
+# & is used for more than 1 action
