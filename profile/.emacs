@@ -51,8 +51,6 @@
 (require 'font-lock)
 (set-face-foreground 'font-lock-string-face "forest green")
 
-(setq emacs-version "XEmacs")
-
 
 ;;; ********************
 ;;; Font-Lock is a syntax-highlighting package.  When it is enabled and you
