@@ -15,7 +15,7 @@ if [ -f ${HOME}/.aliases ]; then
 fi
 
 # Include ansible functions
-if [ -f "${HOME/bin/ansible-fns.sh" ]; then
+if [ -f "${HOME}/bin/ansible-fns.sh" ]; then
   . "${HOME}/bin/ansible-fns.sh"
 fi
 
