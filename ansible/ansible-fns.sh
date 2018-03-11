@@ -60,7 +60,8 @@ function ansibleRole() {
 	echo "Please cd to the root of your Ansible configuration and rerun."
 	return
     fi
-    read -p "Enter role name. No spaces: " ANSROLE
+    echo -n "Enter role name. No spaces: "
+    read ANSROLE
     ROLEDIR="roles/${ANSROLE}"
     if [[ -e "${ROLEDIR}" ]]; then
 	echo "Refusing to overwrite existing location ${ROLEDIR}"
