@@ -1,0 +1,96 @@
+* general (openssl)
+# example
+IP_PORT=1.1.1.1:443
+# get certificate from a port
+echo | openssl s_client -showcerts -connect $IP_PORT
+# view certificate details from port
+echo | openssl s_client -connect $IP_PORT | openssl x509 -inform pem -noout -text
+# With verification
+echo | openssl s_client -connect $IP_PORT -CAfile <path to CA certificate>| openssl x509 -inform pem -noout -text
+
+
+# view a certificate
+openssl x509 -noout -text -inform der -in cert-binary.der
+openssl x509 -noout -text -inform pem -in cert-text.pem
+
+# OS TLS cacert store put .pem files directly in:
+/etc/openldap/cacerts
+# add tls_cert line to:
+/etc/ldap.conf
+
+# For TLS with openldap tools:
+# [ not working] export LDAPTLS_CACERT=cert.pem
+# Add entire certificate chain to trusted cert store:
+certutil -A -n LOCALCA -t Cu,, -d /etc/openldap/certs -i /certificates/localca.pem
+certutil -A -n TDS -t Pu,, -d /etc/openldap/certs -i /certificates/svrname.pem 
+
+
+
+# Redhat - need to create a "hash" named link to the file in the same directory
+# get hash name from
+openssl x509 -hash -noout -in $1
+# use openssl-perl's c_rehash <dirname> to automatically build hash links.
+
+# view a CSR
+openssl req -noout -text -in request.cer
+
+# create a CSR, w/ new unencryped private key in default file name
+# use defaults in the openssl.cfg file.
+openssl req -new -nodes -config openssl.cnf -keyout testserver.key -out testserver.csr
+
+# create a CSR, w/ existing private key
+openssl req -new -key private-key.pem -nodes -config openssl.cnf -out testserver1.csr
+
+# verify OCSP
+openssl ocsp -issuer $CERTCHAINROOTLAST.pem -cert $CERTTOTEST.pem -url $OCSP_URL -CAfile $CERTCHAINROOTLAST.pem -text
+-CAfile is optional. Include for non-standard CA
+-text for verbose response
+
+
+* IBM products
+# list certs in database
+DB=serverkey.kdb
+gsk7cmd -cert -list all -db "$DB" -pw "$PW"
+/opt/jrockit-jdk1.6.0_29/bin/keytool -list -keystore /opt/jrockit-jdk1.6.0_29/jre/lib/security/cacerts
+
+# get details of cert
+gsk7cmd -cert -details -label TDS-LDAP -db serverkey.kdb -pw $PW
+
+#TDS Web GUI trust store:
+/opt/ibm/ldap/V6.2/keyfiles/tds_public_keyfile_jks.jks
+
+# TDS keystore is at
+/home/idsldap/ssl/serverkey.kdb
+
+# Capture a cert from a port and import it to keystore
+DB=/var/pdweb/www-default/certs/pdsrv.kdb
+DB=/var/pdweb/keytab-default/webseal_sms.kdb
+echo | openssl s_client -showcerts -connect <ip>:<port> | openssl x509 -inform pem > /tmp/cert.b64
+gsk7cmd_64 -cert -add -db "$DB" -label <label> -pw "$PW" -file /tmp/cert.b64
+
+# problem importing a CA cert: try using 64 bit version of gsk7cmd
+
+# list Java certs
+cd /opt/IBM/WebSphere/AppServer/java/jre/lib/security
+/opt/IBM/itim/jre/bin/keytool -list -keystore cacerts
+
+# Check for weak cipher usage.
+# This is probably NOT a complete list of weak ciphers.
+ echo | openssl s_client -cipher NULL-MD5:NULL-SHA:EXP-RC2-CBC-MD5:EXP-RC2-CBC-MD5:EXP-RC2-CBC-MD5:EXP-RC2-CBC-MD5:DES-CBC-MD5:DES-CBC-SHA -connect $IP_PORT
+
+# Display certs without password on KDB
+/opt/PolicyDirector/sbin/dispkdb -l -f default-webseald.kdb
+
+/opt/PolicyDirector/sbin/dispkdb -n "PD Server" -f default-webseald.kdb
+
+# Recover password from Stash file
+~/bin/getSthPw <stashfilename>
+
+
+# Get SSL client certificate from WebSEAL
+grep ssl-keyfile /opt/pdweb/etc/webseald-default.conf
+# 
+PW=$(~/bin/getSthPw /var/pdweb/keytab-default/default-webseald.sth)
+gsk7cmd_64 -cert -extract -label "PD Server" -db /var/pdweb/keytab-default/default-webseald.kdb -pw $PW -target /share/tmp/$(hostname)-ssl_cert.pem -format ascii
+chmod a+r /share/tmp/$(hostname)-ssl_cert.pem
+
