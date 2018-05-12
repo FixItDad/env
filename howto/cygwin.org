@@ -19,7 +19,3 @@ CYGWIN value for the daemon: ntsec binmode nodosfilewarning
 chown SYSTEM /var/empty
 chmod 755 /var/empty
 cygrunsrv -S sshd
-
-
-Target: C:\cygwin\bin\run.exe -p /usr/X11R6/bin xterm -display 127.0.0.1:0.0 -ls +tb -sl 1000 -cc 45-57:48,64-90:48,126:48
-Start in: C:\cygwin\bin
