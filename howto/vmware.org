@@ -1,3 +1,0 @@
-* Authorization
-# User / group permissions granted in Web console interface at
-vCenter Servers > Manage > Permissions
