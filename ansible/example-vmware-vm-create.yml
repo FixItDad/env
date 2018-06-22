@@ -1,0 +1,113 @@
+# Tasks for creating a VMware VM. For including in playbooks like the following example
+#
+#  - import_tasks: vm-setup.yml
+#    vars:
+#      cloudinit_loc: "datastore:ISO/ansible-cloudinit.iso"
+#      vmspec:
+#        folder: "MyVMs"
+#        fqdn: "vm1.example.com"
+#        description: "My VM to do stuff"
+#        portgroups:
+#          - name: "VLAN-42"
+#          - name: "VLAN-43"
+#        ip_address: "192.168.42.42"
+#        dns_search: "example.com"
+#        dns_nameservers: "192.168.1.1 192.168.1.2"
+#        disk_size_gb: "32"
+#        disktype: "thin"
+#        datastore: "datastore2"
+#        memory_mb: 8192
+#        cpus: 2
+#      authorized_key: "ssh-rsa AAAAB3 ... 2F6AA4D My SSH public key"
+
+# For VMWare v5.5
+
+
+- name: Check if VM is already running
+  local_action: wait_for host="{{vmspec.ip_address}}" timeout=10 state=started port="{{ansible_port}}" connect_timeout=5
+  register: vmcheck
+  ignore_errors: yes
+
+- name: Create the VM 
+  block:
+    - name: Create work area to build cloud-init files
+      tempfile: state=directory prefix='ansible'
+      register: tmpfile
+
+    - debug: var=tmpfile
+
+    - name: Create cloud-init metadata
+      template: src=files/cloudinit-metadata dest={{tmpfile.path}}/meta-data
+
+    - name: Create cloud-init userdata
+      template: src=files/cloudinit-userdata dest={{tmpfile.path}}/user-data
+
+    - name: Create cloud-init ISO file
+      shell: genisoimage -output {{tmpfile.path}}/cloudinit.iso -volid cidata -joliet -rock {{tmpfile.path}}/*-data
+
+    - name: Copy cloud-init ISO to VMWare datastore
+      vsphere_copy:
+        hostname: "{{vmware_vcenter}}"
+        username: "{{vmware_ansible_userid}}"
+        password: "{{vault_vmware_ansible_pw}}"
+        validate_certs: no
+        datacenter: "{{vmware_datacenter}}"
+        datastore: "{{ cloudinit_loc |regex_replace(':.*','') }}"
+        path: "{{ cloudinit_loc |regex_replace('[^:]*:','') }}"
+        src: "{{tmpfile.path}}/cloudinit.iso"
+
+    - name: cleanup cloudinit work area
+      file: state=absent name={{tmpfile.path}}
+
+    - name: Instantiate a copy of the template
+      vmware_guest:
+        hostname: "{{vmware_vcenter}}"
+        username: "{{vmware_ansible_userid}}"
+        password: "{{vault_vmware_ansible_pw}}"
+        validate_certs: no
+        state: poweredon
+        name: "{{vmspec.fqdn | regex_replace('[.].*$','') }}"
+        annotation: "{{vmspec.description | default('')}}"
+        datacenter: "{{vmware_datacenter}}"
+        esxi_hostname: "{{vmware_hostname}}"
+        template: "Ubuntu 16.04 Server (20180427)"
+        guest_id: ubuntu64Guest
+        folder: "/{{vmware_datacenter}}/vm/{{vmspec.folder}}"
+        hardware:
+          memory_mb: "{{ vmspec.memory_mb | default('1024') }}"
+          num_cpus: "{{ vmspec.cpus | default('1') }}"
+          num_cpu_cores_per_socket: 1
+        disk:
+          - size_gb: "{{vmspec.disk_size_gb}}"
+            type: "{{ vmspec.disktype | default('thin') }}"
+            datastore: "{{vmspec.datastore}}"
+        networks: "{{ vmspec.portgroups }}"
+        cdrom:
+          type: iso
+          iso_path: "[{{ cloudinit_loc |regex_replace(':',']') }}"
+      delegate_to: localhost
+      register: vm_master
+
+    - name: Wait for the server to come up
+      local_action: wait_for host="{{vmspec.ip_address}}" timeout=300 state=started port="{{ansible_port}}" connect_timeout=10
+      when: "vmspec.ip_address is defined"
+
+  when: (vmcheck.failed)
+
+# DOES NOT WORK. Waits for manual approval in vCenter console
+#
+#- name: Free access to the cloud-init ISO
+#  vmware_guest:
+#    hostname: "{{vmware_vcenter}}"
+#    username: "{{vmware_ansible_userid}}"
+#    password: "{{vault_vmware_ansible_pw}}"
+#    validate_certs: no
+#    state: present
+#    force: yes
+#    name: "{{vmspec.fqdn | regex_replace('[.].*$','') }}"
+#    datacenter: ITTL
+#    esxi_hostname: "{{vmware_hostname}}"
+#    cdrom:
+#      type: none
+#  delegate_to: localhost
+

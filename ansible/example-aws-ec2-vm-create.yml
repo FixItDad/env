@@ -1,0 +1,116 @@
+# Create an AWS VM as in the following example
+#  - import_tasks: dp-aws-deploy.yml
+#    vars:
+#      ami_owner: 513442679011
+#      ami_name: "ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-20180418"
+#      vm_name: "MyVM"
+#      inv_name: "ansible_inv_name"
+#      inv_groups: "ansible_group1,ansible_group2"
+#      vpc_name: "My-VPC"
+#      sg_name: "myvm_securitygroup"
+#      vm_instance_type: "t2.large"
+#      vm_disk_size: "32"
+#      ssh_key_name: "mysshkey"
+
+# aws_access and aws_secret variables should be defained in an Ansible vault
+
+- name: Find AMI
+  ec2_ami_facts:
+    region: "{{aws_region}}"
+    aws_access_key: "{{aws_access}}"
+    aws_secret_key: "{{aws_secret}}"
+    owner: "{{ ami_owner }}"
+    filters:
+      name: "{{ ami_name }}"
+  register: info_ami
+
+- name: Get security group id
+  ec2_group_facts:
+    region: "{{aws_region}}"
+    aws_access_key: "{{aws_access}}"
+    aws_secret_key: "{{aws_secret}}"
+    filters:
+      group-name: "{{ sg_name }}"
+  register: info_sg
+
+- name: Get VPC subnet ID
+  ec2_vpc_subnet_facts:
+    region: "{{aws_region}}"
+    aws_access_key: "{{aws_access}}"
+    aws_secret_key: "{{aws_secret}}"
+    filters:
+      "tag:Name": "{{ vpc_name }}"
+  register: info_vpc
+
+- name: Search if VM already exists
+  ec2_instance_facts:
+    region: "{{aws_region}}"
+    aws_access_key: "{{aws_access}}"
+    aws_secret_key: "{{aws_secret}}"
+    filters:
+      "tag:Name": "{{ vm_name }}"
+  register: info_vms
+- debug: var=info_vms
+
+- name: Identify active VM
+  set_fact:
+    info_vm: "{{ item }}"
+  with_items: "{{ info_vms.instances }}"
+  when: item.state.name != "terminated"
+
+- name: Start VM instance
+  block:
+    - name: Start VM
+      ec2:
+        region: "{{aws_region}}"
+        aws_access_key: "{{aws_access}}"
+        aws_secret_key: "{{aws_secret}}"
+        state: running
+        instance_ids: "{{info_vm.instance_id}}"
+
+    - name: Add VM to inventory
+      add_host:
+        name: "{{ inv_name }}"
+        groups: "{{ inv_groups }}"
+        ansible_host: "{{ info_vm.private_ip_address }}"
+  when: ( info_vm is defined)
+
+- name: Get temp file for user_data
+  tempfile: state=file
+  register: tempfile
+
+- name: Create user_data from template
+  template: src="files/cloudinit-userdata" dest="{{ tempfile.path }}" mode=644
+
+- name: Create VM instance
+  block:
+    - name: Create VM
+      ec2:
+        region: "{{aws_region}}"
+        aws_access_key: "{{aws_access}}"
+        aws_secret_key: "{{aws_secret}}"
+        state: present
+        image: "{{info_ami.images[0].image_id}}"
+        key_name: "{{ ssh_key_name }}"
+        instance_type: "{{ vm_instance_type }}"
+        wait: yes
+        vpc_subnet_id: "{{info_vpc.subnets[0].id}}"
+        group_id: "{{info_sg.security_groups[0].group_id}}"
+        user_data: "{{ lookup('file', tempfile.path) }}"
+        instance_tags:
+          Name: "{{ vm_name }}"
+        volumes:
+          - device_name: /dev/sda1
+            volume_size: "{{ vm_disk_size }}"
+            delete_on_termination: true
+      register: info_create
+
+    - name: Add AWS VM to inventory
+      add_host:
+        name: "{{ inv_name }}"
+        groups: "{{ inv_groups }}"
+        ansible_host: "{{ info_create.instances[0].private_ip }}"
+  when: ( not info_vm is defined )
+
+- name: Wait for the server to come up
+  local_action: wait_for host="{{hostvars[inv_name].ansible_host}}" timeout=300 state=started port="{{ansible_port}}" connect_timeout=10
