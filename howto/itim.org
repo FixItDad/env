@@ -31,10 +31,10 @@ diff itimViews-dev_viewtasks.del itimViews-test_viewtasks.del
 account.restore.skip.password.validation=true
 
 
-dn: erglobalid=1316637696663131944,ou=operations,ou=itim,ou=CJIS,dc=itim
+dn: erglobalid=1316637696663131944,ou=operations,ou=itim,ou=LOCAL,dc=itim
 erProcessname: InactivityPurge
 
-dn: erobjectprofilename=MyPerson,ou=objectProfile,ou=itim,ou=CJIS,dc=itim
+dn: erobjectprofilename=MyPerson,ou=objectProfile,ou=itim,ou=LOCAL,dc=itim
 erobjectprofilename: My Person
 objectclass: top
 objectclass: erObjectProfile
@@ -50,7 +50,7 @@ ersearchattr: federationid
 ersearchattr: givenname
 erxml:: PE9iamVjdFByb2ZpbGVPcGVyYXRpb24gbmFtZT0idHJhbnNmZXIiIGlzU3RhdGljPSJmYW
 ...
-erxml example: <ObjectProfileOperation name="add" isStatic="true" isSystem="false" definitionDN="erglobalid=3103557087911026157,ou=operations,ou=itim,ou=CJIS,dc=itim"><OperationParameter name="container" type="OrganizationalContainer" description="An organizational container that will be home for the new person."/><OperationParameter name="person" type="Person" description="A directory value object containing attributes of new user."/></ObjectProfileOperation>
+erxml example: <ObjectProfileOperation name="add" isStatic="true" isSystem="false" definitionDN="erglobalid=3103557087911026157,ou=operations,ou=itim,ou=LOCAL,dc=itim"><OperationParameter name="container" type="OrganizationalContainer" description="An organizational container that will be home for the new person."/><OperationParameter name="person" type="Person" description="A directory value object containing attributes of new user."/></ObjectProfileOperation>
 
 
 * ACI

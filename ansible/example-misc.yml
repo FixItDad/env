@@ -1,0 +1,75 @@
+
+
+# Ensure python is installed for Ansible
+- hosts: install_group_or_host
+  gather_facts: no
+  tasks:
+  - name: Install Python 2
+    raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+    changed_when: false
+
+
+# Routing tables for multiple IPs
+  - name: Add routing table entries
+    blockinfile:
+      path: /etc/iproute2/rt_tables
+      state: present
+      insertafter: EOF
+      block: |
+        1   ens192tbl
+        2   ens224tbl
+    when: ('aws' not in group_names )
+
+
+# Use Python pexpect script to configure non-Anisble SSH/telnet device
+
+    exp_login: |
+      import pexpect
+      import sys
+      import time
+      t = pexpect.spawn('telnet localhost 2200')
+      time.sleep(5)
+      t.logfile = sys.stdout
+      t.expect(":")
+      t.send("username\r")
+      t.expect(":")
+      t.send("password\r")
+
+    exp_prompts: |
+      time.sleep(1)
+
+      # handle several possible prompts
+      # ...
+      # Please enter new password:
+      # Please re-enter new password to confirm:
+      elist = ["\#", 'y/n\]:', "password:", "confirm:"]
+      response = [
+        '\r', 
+        'n\r', 
+        "{{vault_project_default_password}}\r", 
+        "{{vault_project_default_password}}\r",
+        ]
+      i = t.expect(elist):
+      while i != 0:
+        t.send(response[i])
+        i = t.expect(elist):
+
+    exp_exit: |
+      t.expect("\#")
+      t.send("exit\r")
+      t.expect("\#")
+      t.send("exit\r")
+
+    exp_enable_mgmt: |
+      {{ exp_first_login }}
+      {{ exp_prompts }}
+      t.send("configstring\r")
+      {{ exp_exit }}
+
+
+  - name: Enable management console
+    shell: "{{exp_enable_mgmt}}"
+    args:
+      executable: /usr/bin/python
+    when: (mgmt_check.failed)
+

@@ -18,6 +18,14 @@ openssl x509 -noout -text -inform pem -in cert-text.pem
 # add tls_cert line to:
 /etc/ldap.conf
 
+# For TLS with openldap tools:
+# [ not working] export LDAPTLS_CACERT=cert.pem
+# Add entire certificate chain to trusted cert store:
+certutil -A -n LOCALCA -t Cu,, -d /etc/openldap/certs -i /certificates/localca.pem
+certutil -A -n TDS -t Pu,, -d /etc/openldap/certs -i /certificates/svrname.pem 
+
+
+
 # Redhat - need to create a "hash" named link to the file in the same directory
 # get hash name from
 openssl x509 -hash -noout -in $1
@@ -81,13 +89,7 @@ cd /opt/IBM/WebSphere/AppServer/java/jre/lib/security
 
 # Get SSL client certificate from WebSEAL
 grep ssl-keyfile /opt/pdweb/etc/webseald-default.conf
-#   internal WebSEAL's
-PW=$(~/bin/getSthPw /var/pdweb/keytab-default/default-webseald.sth)
-gsk7cmd_64 -cert -extract -label "PD Server" -db /var/pdweb/keytab-default/default-webseald.kdb -pw $PW -target /share/tmp/$(hostname)-ssl_cert.pem -format ascii
-chmod a+r /share/tmp/$(hostname)-ssl_cert.pem
-
-#   external WebSEAL's
-grep ssl-keyfile /opt/pdweb/etc/webseald-default.conf
+#
 PW=$(~/bin/getSthPw /var/pdweb/keytab-default/default-webseald.sth)
 gsk7cmd_64 -cert -extract -label "PD Server" -db /var/pdweb/keytab-default/default-webseald.kdb -pw $PW -target /share/tmp/$(hostname)-ssl_cert.pem -format ascii
 chmod a+r /share/tmp/$(hostname)-ssl_cert.pem

@@ -1,0 +1,15 @@
+#! /usr/bin/python
+
+import re
+import sys
+import xml.dom.minidom
+
+if len(sys.argv) > 1:
+    sys.stdin= open(sys.argv[1])
+
+xml = xml.dom.minidom.parse(sys.stdin) # or xml.dom.minidom.parseString(xml_string)
+uglyXml = xml.toprettyxml(indent='  ', encoding='utf-8')
+text_re = re.compile('>\n\s+([^<>\s].*?)\n\s+</', re.DOTALL)    
+prettyXml = text_re.sub('>\g<1></', uglyXml)
+
+print prettyXml

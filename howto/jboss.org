@@ -32,25 +32,25 @@ rm jboss-as/server/tmp and jboss-as/server/work directories
 
 * Configuration
 ** Default port usage
-TCP    10.2.20.156:1090       <--- RMI/JRMP socket for connecting to the JMX MBeanServer
-TCP    10.2.20.156:1091       <--- RMI server socket
-TCP    10.2.20.156:1099       <--- JNDI Service
-TCP    10.2.20.156:1098       <--- RMI Port for JNDI Service
-TCP    10.2.20.156:4446       <--- JBoss Remoting Connector
-TCP    10.2.20.156:4712       <--- JBossTS Service
-TCP    10.2.20.156:4713       <--- JBossTS Service
-TCP    10.2.20.156:5445       <--- HornetQ JMS Service
-TCP    10.2.20.156:5455       <--- HornetQ Netty port
-TCP    10.2.20.156:5500       <--- JBoss Remoting
-TCP    10.2.20.156:5501       <--- JBoss Remoting ssl
-TCP    10.2.20.156:8009       <--- Web server AjpConnector
-TCP    10.2.20.156:8080       <--- Web server HTTP Connector
-TCP    10.2.20.156:8083       <--- Web services
+TCP    192.168.1.2:1090       <--- RMI/JRMP socket for connecting to the JMX MBeanServer
+TCP    192.168.1.2:1091       <--- RMI server socket
+TCP    192.168.1.2:1099       <--- JNDI Service
+TCP    192.168.1.2:1098       <--- RMI Port for JNDI Service
+TCP    192.168.1.2:4446       <--- JBoss Remoting Connector
+TCP    192.168.1.2:4712       <--- JBossTS Service
+TCP    192.168.1.2:4713       <--- JBossTS Service
+TCP    192.168.1.2:5445       <--- HornetQ JMS Service
+TCP    192.168.1.2:5455       <--- HornetQ Netty port
+TCP    192.168.1.2:5500       <--- JBoss Remoting
+TCP    192.168.1.2:5501       <--- JBoss Remoting ssl
+TCP    192.168.1.2:8009       <--- Web server AjpConnector
+TCP    192.168.1.2:8080       <--- Web server HTTP Connector
+TCP    192.168.1.2:8083       <--- Web services
 
 # additional ports for clusterd servers
-TCP    10.2.20.156:1100       <--- HA JNDI Service
-TCP    10.2.20.156:1101       <--- HA JNDI Service
-TCP    10.2.20.156:3528       <--- Corba IIOP Service
+TCP    192.168.1.2:1100       <--- HA JNDI Service
+TCP    192.168.1.2:1101       <--- HA JNDI Service
+TCP    192.168.1.2:3528       <--- Corba IIOP Service
 
 ** Config files 
 # JMS destinations
