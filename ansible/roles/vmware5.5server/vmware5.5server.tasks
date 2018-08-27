@@ -1,0 +1,242 @@
+#-*- mode: yaml -*-
+
+# Tasks for creating a VMware v5.5 VM. For including in playbooks like the following example
+#
+#  tasks:
+#  - name: Provision VMware VM
+#    include_role:
+#      name: vmware5.5_server
+#    vars:
+#      cloudinit_loc: "datastore:ISO/tmp-ansible-cloudinit.iso"
+#      vmspec:
+#        template: "Ubuntu 16.04 Server (20180427)"
+#        vmware_guestid: "ubuntu64Guest"
+#        folder: "testvms"
+#        fqdn: "vm1.example.com"
+#        description: "Ansible test"
+#        portgroups:
+#          - name: "VLAN-42"
+#          - name: "VLAN-43"
+#            device_type: "vmxnet3"
+#        ip_cidr: "192.168.42.42/24"
+#        ip_gateway: "192.168.42.254"
+#        dns_search: "example.com"
+#        dns_nameservers: ["192.168.1.1", "192.168.1.2"]
+#        disk_size_gb: "32"
+#        disktype: "thin"
+#        datastore: "datastore2"
+#        memory_mb: 8192
+#        cpus: 2
+#      authorized_key: "ssh-rsa AAAAB3 ... 2F6AA4D My SSH public key"
+
+
+- set_fact: ip_address="{{vmspec.ip_cidr |ipaddr('address') }}"
+  when: "vmspec['ip_cidr'] is defined"
+
+- set_fact: 
+    vmcheck:
+      failed: true
+
+- name: Check if VM is already running
+  local_action: wait_for host="{{ip_address }}" timeout=10 state=started port="{{ansible_port}}" connect_timeout=5
+  register: vmcheck
+  ignore_errors: yes
+  when: "vmspec['ip_cidr'] is defined"
+
+
+- name: Create the VM 
+  block:
+    # Using a CD image to get cloudinit data to the VM. This is not optimal, but other
+    # methods were not working.
+    - name: Create work area to build cloud-init files
+      tempfile: state=directory prefix='ansible'
+      register: tmpfile
+    - name: Create cloud-init metadata
+      template: src=cloudinit-metadata dest={{tmpfile.path}}/meta-data
+    - name: Create cloud-init userdata
+      template: src=cloudinit-userdata dest={{tmpfile.path}}/user-data
+    - name: Create cloud-init ISO file
+      shell: genisoimage -output {{tmpfile.path}}/cloudinit.iso -volid cidata -joliet -rock {{tmpfile.path}}/*-data
+
+    - name: Copy cloud-init ISO to VMWare datastore
+      vsphere_copy:
+        hostname: "{{vmware_vcenter}}"
+        username: "{{vmware_ansible_userid}}"
+        password: "{{vault_vmware_ansible_pw}}"
+        validate_certs: no
+        datacenter: "{{vmware_datacenter}}"
+        datastore: "{{ cloudinit_loc |regex_replace(':.*','') }}"
+        path: "{{ cloudinit_loc |regex_replace('[^:]*:','') }}"
+        src: "{{tmpfile.path}}/cloudinit.iso"
+
+    - name: Cleanup cloudinit work area
+      file: state=absent name={{tmpfile.path}}
+
+    - name: Instantiate a copy of the template
+      vmware_guest:
+        hostname: "{{vmware_vcenter}}"
+        username: "{{vmware_ansible_userid}}"
+        password: "{{vault_vmware_ansible_pw}}"
+        validate_certs: no
+        state: poweredon
+        name: "{{vmspec.fqdn | regex_replace('[.].*$','') }}"
+        annotation: "{{vmspec.description | default('')}}"
+        datacenter: "{{vmware_datacenter}}"
+        esxi_hostname: "{{vmware_hostname}}"
+        template: "{{vmspec.template}}"
+        guest_id: "{{vmspec.vmware_guestid}}"
+        folder: "/{{vmware_datacenter}}/vm/{{vmspec.folder}}"
+        hardware:
+          memory_mb: "{{ vmspec.memory_mb | default('1024') }}"
+          num_cpus: "{{ vmspec.cpus | default('1') }}"
+          num_cpu_cores_per_socket: 1
+        disk:
+          - size_gb: "{{vmspec.disk_size_gb}}"
+            type: "{{ vmspec.disktype | default('thin') }}"
+            datastore: "{{vmspec.datastore}}"
+        networks: "{{ vmspec.portgroups }}"
+        cdrom:
+          type: iso
+          iso_path: "[{{ cloudinit_loc |regex_replace(':',']') }}"
+      delegate_to: localhost
+      register: vm_master
+
+    - name: Wait for cloudinit to be processed
+      local_action: wait_for host="{{ip_address}}" timeout=300 state=started port="{{ansible_port}}" connect_timeout=10
+
+# Guest shutdown is not working.
+#    - name: Shutdown to remove the cloud-init ISO
+#      vmware_guest:
+#        hostname: "{{vmware_vcenter}}"
+#        username: "{{vmware_ansible_userid}}"
+#        password: "{{vault_vmware_ansible_pw}}"
+#        validate_certs: no
+#        state: shutdownguest
+#        name: "{{vmspec.fqdn | regex_replace('[.].*$','') }}"
+#      delegate_to: localhost
+
+#    - fail: msg="stop here"
+
+    - name: Shutdown to remove cloud-init ISO
+      local_action: command ssh -i core-ssh.pem -o StrictHostKeyChecking=no root@"{{ip_address}}" 'shutdown -h now'
+      ignore_errors: yes
+
+    - name: Wait for the server to go down
+      local_action: wait_for host="{{ip_address}}" timeout=300 delay=5 state=stopped port="{{ansible_port}}" connect_timeout=10
+
+    - name: Free access to the cloud-init ISO
+      vmware_guest:
+        hostname: "{{vmware_vcenter}}"
+        username: "{{vmware_ansible_userid}}"
+        password: "{{vault_vmware_ansible_pw}}"
+        validate_certs: no
+        state: present
+        force: yes
+        name: "{{vmspec.fqdn | regex_replace('[.].*$','') }}"
+        datacenter: "{{vmware_datacenter}}"
+        esxi_hostname: "{{vmware_hostname}}"
+        cdrom:
+          type: none
+      delegate_to: localhost
+
+    - name: Wait for VMware to finish
+      local_action: wait_for timeout=5
+
+    - name: Start it up again
+      vmware_guest:
+        hostname: "{{vmware_vcenter}}"
+        username: "{{vmware_ansible_userid}}"
+        password: "{{vault_vmware_ansible_pw}}"
+        validate_certs: no
+        state: poweredon
+        name: "{{vmspec.fqdn | regex_replace('[.].*$','') }}"
+      delegate_to: localhost
+
+    - name: Wait for the server to be up and usable
+      local_action: wait_for host="{{ip_address}}" timeout=300 state=started port="{{ansible_port}}" connect_timeout=10
+
+  when: (vmcheck.failed)
+
+# DOES NOT WORK. Waits for manual approval in vCenter console
+#
+#- name: Free access to the cloud-init ISO
+#  vmware_guest:
+#    hostname: "{{vmware_vcenter}}"
+#    username: "{{vmware_ansible_userid}}"
+#    password: "{{vault_vmware_ansible_pw}}"
+#    validate_certs: no
+#    state: present
+#    force: yes
+#    name: "{{vmspec.fqdn | regex_replace('[.].*$','') }}"
+#    datacenter: "{{vmware_datacenter}}"
+#    esxi_hostname: "{{vmware_hostname}}"
+#    cdrom:
+#      type: none
+#  delegate_to: localhost
+
+
+# This is what vmware_guest returns for a static configured network
+#ok: [localhost] => {
+#    "vm_master": {
+#        "changed": true, 
+#        "failed": false, 
+#        "instance": {
+#            "annotation": "Ansible test", 
+#            "current_snapshot": null, 
+#            "customvalues": {}, 
+#            "guest_consolidation_needed": false, 
+#            "guest_question": null, 
+#            "guest_tools_status": "guestToolsNotRunning", 
+#            "guest_tools_version": "0", 
+#            "hw_cores_per_socket": 1, 
+#            "hw_datastores": [
+#                "datastore1", 
+#                "datastore2"
+#            ], 
+#            "hw_esxi_host": "192.168.42.42", 
+#            "hw_eth0": {
+#                "addresstype": "assigned", 
+#                "ipaddresses": null, 
+#                "label": "Network adapter 1", 
+#                "macaddress": "00:50:56:aa:02:5e", 
+#                "macaddress_dash": "00-50-56-aa-02-5e", 
+#
+#                "summary": "DVSwitch: ba d2 2a 50 68 4c 85 e7-9d 2f ca ba d7 a9 11 d4"
+#            }, 
+#            "hw_eth1": {
+#                "addresstype": "assigned", 
+#                "ipaddresses": null, 
+#                "label": "Network adapter 2", 
+#                "macaddress": "00:50:56:aa:6e:22", 
+#                "macaddress_dash": "00-50-56-aa-6e-22", 
+#                "summary": "DVSwitch: ba d2 2a 50 68 4c 85 e7-9d 2f ca ba d7 a9 11 d4"
+#            }, 
+#            "hw_files": [
+#                "[datastore2] test/test.vmx", 
+#                "[datastore2] test/test.vmxf", 
+#                "[datastore2] test/test.vmsd", 
+#                "[datastore2] test/test.nvram", 
+#                "[datastore2] test/test.vmdk"
+#            ], 
+#            "hw_folder": "/mydatacenter/vm/testvms", 
+#            "hw_guest_full_name": null, 
+#            "hw_guest_ha_state": false, 
+#            "hw_guest_id": null, 
+#            "hw_interfaces": [
+#                "eth0", 
+#                "eth1"
+#            ], 
+#            "hw_is_template": false, 
+#            "hw_memtotal_mb": 8192, 
+#            "hw_name": "test", 
+#            "hw_power_status": "poweredOn", 
+#            "hw_processor_count": 2, 
+#            "hw_product_uuid": "422a62da-d6d0-fa32-9af6-c8699d4784d0", 
+#            "instance_uuid": "502a2d20-740f-b44c-78ef-339b2e9a49e8", 
+#            "ipv4": null, 
+#            "ipv6": null, 
+#            "module_hw": true, 
+#            "snapshots": []
+#        }
+#    }
+#}

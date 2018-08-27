@@ -1,0 +1,3 @@
+---
+- include: ../vmware5.5server.tasks
+  tags: vmware5.5server

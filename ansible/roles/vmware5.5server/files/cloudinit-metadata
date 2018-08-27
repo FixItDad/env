@@ -1,0 +1,23 @@
+# The meta-data file for cloud-init NoCloud Datasource
+# For use with an Ubuntu cloud image.
+
+instance-id: iid-ubuntucloud
+network-interfaces: |
+  # The loopback network interface
+  auto lo
+  iface lo inet loopback
+
+  # The primary network interface
+  auto ens192
+  {% if vmspec.ip_cidr is defined -%}
+  iface ens192 inet static
+  address {{ vmspec.ip_cidr | ipaddr('address') }}
+  netmask {{ vmspec.ip_cidr | ipaddr('netmask') }}
+  gateway {{ vmspec.ip_gateway }}
+  dns-search {{ vmspec.dns_search }}
+  dns-nameservers {{ vmspec.dns_nameservers | join(' ') }}
+  {% else -%}
+  iface ens192 inet dhcp
+  {%- endif %}
+
+fqdn: {{ vmspec.fqdn }}
