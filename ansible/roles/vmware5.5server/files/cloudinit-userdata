@@ -1,0 +1,27 @@
+#cloud-config
+# This is user-data for cloud-init NoCloud datasource for use with an Ubuntu cloud image.
+
+# Expand root to fill the allocated space.
+growpart:
+  mode: auto
+  devices: ["/"]
+  ignore_growroot_disabled: false
+
+# No password authentication
+chpasswd:
+  expire: true
+
+# Allow ubuntu user
+users:
+  - default
+
+# Allow ssh kay access to the VM for ubuntu and root
+disable_root: false
+ssh_authorized_keys:
+  - {{ authorized_key }}
+
+write_files:
+  - path: /etc/cloud/cloud-init.disabled
+    owner: root:root
+    permissions: '0444'
+    content: "disabled after first run"

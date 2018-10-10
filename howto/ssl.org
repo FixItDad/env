@@ -89,7 +89,7 @@ cd /opt/IBM/WebSphere/AppServer/java/jre/lib/security
 
 # Get SSL client certificate from WebSEAL
 grep ssl-keyfile /opt/pdweb/etc/webseald-default.conf
-# 
+#
 PW=$(~/bin/getSthPw /var/pdweb/keytab-default/default-webseald.sth)
 gsk7cmd_64 -cert -extract -label "PD Server" -db /var/pdweb/keytab-default/default-webseald.kdb -pw $PW -target /share/tmp/$(hostname)-ssl_cert.pem -format ascii
 chmod a+r /share/tmp/$(hostname)-ssl_cert.pem
