@@ -9,3 +9,7 @@ git status
 # make sure git status is clean
 git reset --hard origin-master
 ```
+### Commit overriding configured user info
+```
+git -c user.name='Paul Sparks' -c user.mail='paul@example.org' commit -m ...
+```
