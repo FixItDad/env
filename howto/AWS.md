@@ -77,3 +77,22 @@
     }
 ```
   
+### CloudInit UserData
+
+Use the following line in a bash script to redirect output to console to be readable via the aws CLI
+```exec > >(logger -t user-data -s 2>/dev/console) 2>&1```
+read with ```aws ec2 get-console-output --instance-id <instID>```
+
+```
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          # move ssh port to 80
+          /usr/sbin/semanage port -m -t ssh_port_t -p tcp 80
+          /usr/bin/firewall-offline-cmd --add-port=80/tcp
+          /usr/bin/sed -i '/^Port *[0-9]/d' /etc/ssh/sshd_config
+          echo -e "\nPort 80" >>/etc/ssh/sshd_config
+          /usr/bin/systemctl restart sshd
+          sleep 10; /usr/bin/firewall-cmd --reload
+          echo "UserData script completed."
+```

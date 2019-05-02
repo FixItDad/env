@@ -84,6 +84,12 @@ EOF
   with_items:
     - ${ANSROLE}
 
+- name: packages
+  apt: name={{item}} state=latest
+  when: (ansible_pkg_mgr == "apt")
+  with_items:
+    - ${ANSROLE}
+
 - name: config files mode 0644
   copy: src={{item}} dest=/{{item}} mode=0644
   with_items:

@@ -1,0 +1,5 @@
+# Reboot a linux server from Ansible
+    - name: Reboot to apply changes
+      shell: (sleep 3 && /usr/sbin/shutdown -r now & )
+      async: 1
+      poll: 0
