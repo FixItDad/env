@@ -1,6 +1,7 @@
 
 # Stash values for use with Ansible
 # Requires changes to ansible.cfg and the getvaultpw.sh script
+# Make sure the script is executable
 function ansiblepw {
 echo -n "become(sudo): "
 read -s CTPW
