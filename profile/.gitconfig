@@ -1,0 +1,24 @@
+[user]
+	name = name
+	email = name@domain
+[core]
+	excludesfile = ~/.gitignore_global
+	pager = less -x4
+#[http]
+#[https]
+# use env variable 
+# <space>export https_proxy='https://TODO:pw@127.0.0.1:7980'
+
+[color]
+	ui = auto
+[alias]
+	co = checkout
+	br = branch
+	st = status
+	unstage = reset HEAD --
+	devmerge = merge --no-ff
+    diffm = difftool -y -t meld
+[push]
+	default = current
+[http]
+	sslCAInfo = /home/user/etc/certs/proxycerts.pem

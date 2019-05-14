@@ -1,0 +1,103 @@
+---
+
+- hosts: localhost
+  vars:
+    sg_rules_nfs:
+      - proto: tcp
+        ports: [22]
+        cidr_ip: "{{allow_ssh_cidr}}"
+        rule_desc: "Allow SSH from local VPC"
+      - proto: tcp
+        ports: [2049]
+        cidr_ip: "10.0.0.0/8"
+        rule_desc: "Allow NFS from VPC"
+
+  tasks:
+
+  - name: NFS | Create EC2 instance
+    import_role:
+      name: ec2_instance
+    vars:
+      region: "{{aws_region}}"
+      ssh_key_name: "{{aws_ssh_key_name}}"
+      vm_name: "{{prefix}}-nfs"
+      instance_type: "t2.micro"
+      image_id: "{{base_ami_id}}"
+      vpc_id: "{{cfs_vpc_id}}"
+      subnet_name: "{{nfs_subnet_name}}"
+      sg_rules: "{{sg_rules_nfs}}"
+
+  - name: NFS | Create / attach data volume
+    ec2_vol:
+      state: present
+      name: "nfs_data"
+      region: "{{aws_region}}"
+      delete_on_termination: no
+      device_name: /dev/xvdf
+      encrypted: yes
+      instance: "{{ec2_instance.instance_id}}"
+      iops: "{{ nfs_data_iops | default(100) }}"
+      volume_size: "{{ nfs_server_data_size | default(100)}}"
+      volume_type: "{{ nfs_server_data_type | default('standard') }}"
+
+
+  # Update inventory for newly created systems                                                          
+  - meta: refresh_inventory
+
+
+# This play just installs a minimal Python environment for Ansible                                      
+- hosts: nfs
+  gather_facts: no
+  become: yes
+
+  roles:
+  - role: bootstrap_ansible
+    vars:
+      bootstrap_os: "{{target_os}}"
+
+
+- hosts: nfs
+  become: yes
+  tasks:
+  - name: nfsserver | Ensure mount point exists
+    file:
+      state: directory
+      name: "{{nfs_mount_point}}"
+      mode: 0755
+      owner: root
+      group: root
+      seuser: system_u
+      setype: home_root_t
+
+  - name: nfsserver | Check for filesystem on nfs volume
+    filesystem:
+      dev: "{{nfs_data_device}}"
+      fstype: "{{nfs_data_fstype }}"
+      opts: "{{nfs_mkfs_opts }}"
+
+  - name: nfsserver | Mount data volume
+    mount:
+      state: mounted
+      path: "{{nfs_mount_point}}"
+      fstype: "{{nfs_data_fstype }}"
+      opts: "{{nfs_mount_opts }}"
+      src: "{{nfs_data_device}}"
+
+  - name: nfsserver | Ensure exported home directory exists
+    file:
+      state: directory
+      name: "{{nfs_mount_point}}/home"
+      mode: 0755
+      owner: root
+      group: root
+      seuser: system_u
+      setype: home_root_t
+
+- hosts: nfs
+  become: yes
+  vars:
+    exports:
+    - path: "/export/home"
+      options: "*(rw,sync,no_root_squash,no_all_squash)"
+  roles:
+  - nfs4_server
