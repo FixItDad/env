@@ -13,3 +13,7 @@ git reset --hard origin-master
 ```
 git -c user.name='Paul Sparks' -c user.mail='paul@example.org' commit -m ...
 ```
+### Find commit where file was added
+```
+git log --follow --diff-filter=A --find-renames=40% foo.js
+```
